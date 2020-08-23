@@ -6,19 +6,21 @@ defmodule ScenicNinja.Scene.Home do
   alias Scenic.ViewPort
 
   import Scenic.Primitives
-  # import Scenic.Components
 
   @text_size 24
+  @width 1000
+  @height 600
   @blue 150
   @image_path :code.priv_dir(:scenic_ninja) |> Path.join("/static/images/castle3.png")
   @image_hash Scenic.Cache.Support.Hash.file!(@image_path, :sha)
   @graph Graph.build(font: :roboto, font_size: @text_size)
          |> add_specs_to_graph([
-           rect_spec({1000, 600}, fill: {175, 216, @blue}),
-           rect_spec({1000, 600}, fill: {:image, @image_hash})
+           rect_spec({@width, @height}, fill: {175, 216, @blue}, id: :background_color),
+           rect_spec({@width, @height}, fill: {:image, @image_hash}, id: :background_image),
+           rect_spec({@width, 20}, fill: {:color, :blue}, t: {0, @height - 20}, id: :floor)
          ])
 
-  @frame_ms 32
+  @frame_ms 64
 
   # ============================================================================
   # setup
@@ -37,7 +39,6 @@ defmodule ScenicNinja.Scene.Home do
     {:ok, timer} = :timer.send_interval(@frame_ms, :frame)
 
     state = %{
-      viewport: viewport,
       width: width,
       height: height,
       graph: @graph,
@@ -52,7 +53,7 @@ defmodule ScenicNinja.Scene.Home do
   end
 
   def handle_input(event, _context, state) do
-    # Logger.info("Received event: #{inspect(event)}}")
+    Logger.info("Received event: #{inspect(event)}}")
     {:noreply, state}
   end
 
@@ -66,13 +67,13 @@ defmodule ScenicNinja.Scene.Home do
 
   def render_next_frame(%{width: width, height: height, frame_count: frame_count} = state) do
     {blue, blue_forward} = fade_background_colour(state)
+    state.graph |> IO.inspect(label: "graph")
 
     graph =
       state.graph
-      |> rect({width, height}, fill: {175, 216, blue})
-      |> rect({width, height}, fill: {:image, @image_hash})
+      |> Graph.modify(:background_color, &rect(&1, {width, height}, fill: {175, 216, blue}))
 
-    %{state | blue: blue, blue_forward: blue_forward, graph: graph, frame_count: frame_count}
+    %{state | blue: blue, blue_forward: blue_forward, graph: graph, frame_count: frame_count + 1}
   end
 
   def fade_background_colour(%{blue: blue, blue_forward: false}) when blue <= 130,
